@@ -11,7 +11,7 @@ if($_SERVER['USER'] == 'work') {
 	];
 }else{
 	$sv_config = [
-		'dbname' => 'api_boa',
+		'dbname' => 'coletor_nat',
 		'user'   => 'root',
 		'passwd' => '2019maconhaOk@@',
 		'mysqlsv'=> '127.0.0.1',

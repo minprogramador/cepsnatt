@@ -65,41 +65,26 @@ function runPayload($payload) {
 	return $deferred->promise();
 }
 
-$loop->addPeriodicTimer(45, function(Timer $timer) {
+function runSql($payload) {
+	global $connection;
+	$result = '';
+	$deferred = new Deferred();
 
-	echo date("Y-m-d H:i:s")." - verifica cookie e proxys ~ roda a cada 45s ..\n";
-
-//    $payload = "php shild.php";
-//    runPayload($payload)
-//        ->then(function ($value) {
-//
-//            print_r($value);
-//            echo date("Y-m-d H:i:s")." - FIMMM verifica cookie e proxys..\n";
-//        },
-//        function ($reason) {
-//            echo "\ndeu error...\n";
-//        }
-//    );
-
-});
-
-$loop->addPeriodicTimer(300, function(Timer $timer) {
-//
-//    echo date("Y-m-d H:i:s")." ~ ..::verifica cache de proxys ~ roda a cada 5m ::..\n";
-//
-//    $payload = "php shild_rede.php";
-//    runPayload($payload)
-//        ->then(function ($value) {
-//
-//            print_r($value);
-//            echo date("Y-m-d H:i:s")." ~ ..:: FIMM verifica cache de proxys::..\n";
-//        },
-//        function ($reason) {
-//            echo "\ndeu error...\n";
-//        }
-//    );
-		
-});
+	$connection->query($payload, function ($command, $conn) use($deferred){
+		if ($command->hasError()) {
+			$error = $command->getError();
+			$deferred->reject($error);
+		} else {
+			if(isset($command->resultRows)) {
+				$results = $command->resultRows;
+			}else {
+				$results = true;
+			}
+			$deferred->resolve($results);
+		}
+	});
+	return $deferred->promise();
+}
 
 $app->get('/', function (Request $request, Response $response) use($connection, $loop, &$startrun) {
 
@@ -116,277 +101,35 @@ $app->get('/', function (Request $request, Response $response) use($connection, 
     $response->end();
 });
 
-$app->get('/status', function (Request $request, Response $response) use($connection, $loop, &$startrun) {
+$app->get('/status/pendente', function (Request $request, Response $response) use($connection, $loop, &$startrun) {
 
-
-    $connection->query('select cep from log_logradouro limit 10', function ($command, $conn) use ($request, $loop, $response, &$startrun) {
-        if ($command->hasError()) {
-
-            $error = $command->getError();
-        } else {
-
-            $results = $command->resultRows;
-//
-//            $tudook = array_filter($results, function($elem) {
-//                if(strlen($elem['retorno']) > 100) {
-//                    return $elem;
-//                }
-//            });
-//
-//            $tudoruim = array_filter($results, function($elem) {
-//                if(strlen($elem['retorno']) < 100) {
-//                    return $elem;
-//                }
-//            });
-        }
-
-//        $results = [
-//            'total'    => count($results),
-//            'ativos'   => count($tudook),
-//            'inativos' => count($tudoruim)
-//        ];
-//
-//        $response->writeHead(200, ["Content-Type" => "application/json"]);
-//            $response->write(json_encode($results));
-//            $response->end();
-//                       $results = [
-//                       'total'   => 0,
-//                       'processados'   => 0,
-//                       'inicio'   => 0,
-//                       'fim'     => 0,
-//                       'status' => true,
-//                       'start' => $startrun,
-//                       'update' => ''
-//                       ];
-//
-                       $response->writeHead(200, ["Content-Type" => "application/json"]);
-                       $response->write(json_encode($results));
-                       $response->end();
-    
-    });
-
-
-
-});
-
-$app->get('/logs', function (Request $request, Response $response) use($connection, $loop) {
-
-	$payload = "cat logs.txt";
-
-	runPayload($payload)
-		->then(function ($value) use($response){
-
-			$response->writeHead(200, ["Content-Type" => "text/html"]);
-			$response->write($value);
-			$response->end();
-		},
-		function ($reason) use($response) {
-
-			$response->writeHead(200, ["Content-Type" => "text/html"]);
-			$response->write('log nao existe');
-			$response->end();
+	$connection->query('select count(cep) as total from ceps where `status`=1;', function ($command, $conn) use ($request, $loop, $response) {
+		if ($command->hasError()) {
+			$error = $command->getError();
+		} else {
+			$results = $command->resultRows;
 		}
-	);
-});
-//
-//$app->get('/consulta/{doc}', function (Request $request, Response $response) use($connection, $loop) {
-//    $token = 'demo';
-//    $querys = $request->getQuery();
-//    if(isset($querys['type'])) {
-//        $type = $querys['type'];
-//        if($type == 'json') {
-//            $type = 'json';
-//        }
-//    }else{
-//        $type = 'html';
-//    }
-//
-//    $verurl = $request->getPath();
-//    $verurl = explode("consulta/", $verurl);
-//
-//    if(isset($verurl[1])) {
-//
-//        $doc = $verurl[1];
-//
-//        if(strlen($doc) === 11) {
-//            $cpf = $doc;
-//        }elseif(strlen($doc) === 14) {
-//            $cnpj = $doc;
-//        }else{
-//            $results = ['msg' => 'doc invalido.'];
-//        }
-//    }else{
-//        $results = ['msg' => 'doc invalido.'];
-//    }
-//
-//    if(!isset($results)) {
-//
-//        if(isset($cpf)){
-//
-//            $payload = "php gambi.php a=$token t=$type doc=".$cpf;
-//
-//            runPayload($payload)
-//                ->then(function ($value) use($response){
-//                    if(strlen($value) < 40) {
-//                        $value = 'Opss, deu erro ao consultar...';
-//                    }
-//                    $response->writeHead(200, ["Content-Type" => "application/json"]);
-//                    $response->write($value);
-//                    $response->end();
-//                },
-//                function ($reason) use($response) {
-//
-//                    $response->writeHead(200, ["Content-Type" => "text/html"]);
-//                    $response->write('Opss, deu erro ao consultar....' . $reason);
-//                    $response->end();
-//                }
-//            );
-//
-//        }elseif(isset($cnpj)) {
-//            $results = ['msg' => 'consulta cnpj'];
-//            $response->writeHead(200, ["Content-Type" => "application/json"]);
-//            $response->write(json_encode($results));
-//            $response->end();
-//        }else{
-//            $results = ['msg' => 'vc fez alguma merda.'];
-//            $results = ['msg' => 'consulta cnpj'];
-//            $response->writeHead(200, ["Content-Type" => "application/json"]);
-//            $response->write(json_encode($results));
-//            $response->end();
-//        }
-//    }
-//
-//});
-//
-//$app->get('/historico', function (Request $request, Response $response) use($connection, $loop, &$startrun) {
-//
-//    $connection->query('select * from historico', function ($command, $conn) use ($request, $loop, $response, &$startrun) {
-//        if ($command->hasError()) {
-//
-//            $error = $command->getError();
-//
-//        } else {
-//
-//            $results = $command->resultRows;
-//
-//            $tudook = array_filter($results, function($elem) {
-//                if(strlen($elem['retorno']) > 100) {
-//                    return $elem;
-//                }
-//            });
-//
-//            $tudoruim = array_filter($results, function($elem) {
-//                if(strlen($elem['retorno']) < 100) {
-//                    return $elem;
-//                }
-//            });
-//        }
-//
-//        $results = [
-//            'total'    => count($results),
-//            'ativos'   => count($tudook),
-//            'inativos' => count($tudoruim)
-//        ];
-//
-//        $response->writeHead(200, ["Content-Type" => "application/json"]);
-//        $response->write(json_encode($results));
-//        $response->end();
-//    });
-//
-//});
-//
-//
-//$app->get('/', function (Request $request, Response $response) use($connection, $loop, &$startrun) {
-//
-//    $connection->query('select * from contas', function ($command, $conn) use ($request, $loop, $response, &$startrun) {
-//        if ($command->hasError()) {
-//
-//            $error = $command->getError();
-//
-//        } else {
-//
-//            $results = $command->resultRows;
-//
-//            $tudook = array_filter($results, function($elem) {
-//                if(strlen($elem['proxy']) > 5 and strlen($elem['cookie']) > 10 and $elem['status'] == true) {
-//                    return $elem;
-//                }
-//            });
-//
-//            $tudoruim = array_filter($results, function($elem) {
-//                if($elem['status'] == false) {
-//                    return $elem;
-//                }
-//            });
-//
-//            $penden_proxy = array_filter($results, function($elem) {
-//                if(strlen($elem['proxy']) < 5 and $elem['status'] == true) {
-//                    return $elem;
-//                }
-//            });
-//
-//            $penden_sessao = array_filter($results, function($elem) {
-//                if(strlen($elem['cookie']) < 10 and $elem['status'] == true) {
-//                    return $elem;
-//                }
-//            });
-//        }
-//
-//        $results = [
-//            'total'    => count($results),
-//            'ativos'   => count($tudook),
-//            'inativos' => count($tudoruim),
-//            'pendente rede'   => count($penden_proxy),
-//            'pendente sessao' => count($penden_sessao),
-//            'status' => true,
-//            'start'  => $startrun
-//        ];
-//
-//        $conn->query('select * from redes', function ($command1, $conn1) use ($request, $loop, $response, &$startrun, $results) {
-//
-//            if ($command1->hasError()) {
-//                $error = $command1->getError();
-//            } else {
-//                $results1 = $command1->resultRows;
-//            }
-//
-//            $tudook_rede = array_filter($results1, function($elem) {
-//                if(strlen($elem['proxy']) > 5 and $elem['ativo'] == true and $elem['status'] == true) {
-//                    return $elem;
-//                }
-//            });
-//
-//            $tudoruim_rede = array_filter($results1, function($elem) {
-//                if($elem['ativo'] == false) {
-//                    return $elem;
-//                }
-//            });
-//            $results['rede total'] = count($results1);
-//            $results['rede on']    = count($tudook_rede);
-//            $results['rede off']   = count($tudoruim_rede);
-//            $results['rede max']   = 50;
-//
-//            $payload = "php shild_info.php";
-//            runPayload($payload)
-//                ->then(function ($value) use ($request, $loop, $response, &$startrun, $results) {
-//                    $value = json_decode($value, true);
-//                    $results['serverinfo'] = $value;
-//                    $response->writeHead(200, ["Content-Type" => "application/json"]);
-//                    $response->write(json_encode($results));
-//                    $response->end();
-//                },
-//                function ($reason) use($response, $results) {
-//                    $response->writeHead(200, ["Content-Type" => "application/json"]);
-//                    $response->write(json_encode($results));
-//                    $response->end();
-//                }
-//            );
-//
-//        });
-//    });
-//
-//});
+		$response->writeHead(200, ["Content-Type" => "application/json"]);
+		$response->write(json_encode($results));
+		$response->end();
+	});
 
+});
+
+$app->get('/status/processados', function (Request $request, Response $response) use($connection, $loop, &$startrun) {
+
+	$connection->query('select count(cep) as total from ceps where `status`=3;', function ($command, $conn) use ($request, $loop, $response) {
+		if ($command->hasError()) {
+			$error = $command->getError();
+		} else {
+		$results = $command->resultRows;
+		}
+		$response->writeHead(200, ["Content-Type" => "application/json"]);
+		$response->write(json_encode($results));
+		$response->end();
+	});
+
+});
 
 $app->run();
 $loop->run();
